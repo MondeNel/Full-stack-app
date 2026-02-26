@@ -1,42 +1,56 @@
-using AuthenticationApi.Dtos;
+using AuthenticationApi.DTOs;
 using AuthenticationApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AuthenticationApi.Controllers;
-
-[ApiController]
-[Route("[controller]")]
-public class UserController : ControllerBase
+namespace AuthenticationApi.Controllers
 {
-    private readonly IAuthenticationService _authenticationService;
-
-    public UserController(IAuthenticationService authenticationService)
+    [ApiController]
+    [Route("api/auth")]
+    public class AuthController : ControllerBase
     {
-        _authenticationService = authenticationService;
-    }
+        private readonly IAuthenticationService _authService;
 
-    [AllowAnonymous]
-    [HttpPost("login")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
-    {
-        var response = await _authenticationService.Login(request);
+        public AuthController(IAuthenticationService authService)
+        {
+            _authService = authService;
+        }
 
-        return Ok(response);
-    }
+        /// <summary>
+        /// Authenticates a user and returns a JWT token
+        /// </summary>
+        /// <param name="request">User login credentials</param>
+        /// <returns>JWT token</returns>
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginDto request)
+        {
+            var token = await _authService.LoginAsync(request);
+            return Ok(new { token });
+        }
 
-    [AllowAnonymous]
-    [HttpPost("register")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-    {
-        var response = await _authenticationService.Register(request);
+        /// <summary>
+        /// Registers a new user
+        /// </summary>
+        /// <param name="request">User registration data</param>
+        /// <returns>Success message</returns>
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto request)
+        {
+            await _authService.RegisterAsync(request);
+            return Ok(new { message = "User registered successfully" });
+        }
 
-        return Ok(response);
+        /// <summary>
+        /// Protected test endpoint
+        /// </summary>
+        /// <returns>Authorized message</returns>
+        [Authorize]
+        [HttpGet("me")]
+        public IActionResult Me()
+        {
+            return Ok(new { message = "You are authorized" });
+        }
     }
 }
