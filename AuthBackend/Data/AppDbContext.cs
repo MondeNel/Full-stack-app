@@ -2,11 +2,23 @@ using AuthenticationApi.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace AuthenticationApi.Db;
-
-public class AppDbContext : IdentityDbContext<User>
+namespace AuthenticationApi.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    /// <summary>
+    /// Database context for the application
+    /// Handles Identity tables and PostgreSQL connection
+    /// </summary>
+    public class AppDbContext : IdentityDbContext<User>
     {
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
+        {
+        }
+
+        // Optional: customize table names if needed
+        // protected override void OnModelCreating(ModelBuilder builder)
+        // {
+        //     base.OnModelCreating(builder);
+        // }
     }
 }
