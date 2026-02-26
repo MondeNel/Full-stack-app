@@ -1,178 +1,92 @@
-using AuthBackend.Data;
-using AuthBackend.DTOs;
-using AuthBackend.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
+using AuthenticationApi.Dtos;
+using AuthenticationApi.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 
-namespace AuthBackend.Services
+namespace AuthenticationApi.Services;
+
+public class AuthenticationService : IAuthenticationService
 {
-    public class AuthService
+    private readonly UserManager<User> _userManager;
+    private readonly IConfiguration _configuration;
+
+    public AuthenticationService (UserManager<User> userManager, IConfiguration configuration)
     {
-        private readonly AppDbContext _context;
-        private readonly IConfiguration _config;
+        _userManager = userManager;
+        _configuration = configuration;
+    }
 
-        public AuthService(AppDbContext context, IConfiguration config)
+    public async Task<string> Register(RegisterRequest request)
+    {
+        var userByEmail = await _userManager.FindByEmailAsync(request.Email);
+        var userByUsername = await _userManager.FindByNameAsync(request.Username);
+        if (userByEmail is not null || userByUsername is not null)
         {
-            _context = context;
-            _config = config;
+            throw new ArgumentException($"User with email {request.Email} or username {request.Username} already exists.");
         }
 
-        /// <summary>
-        /// Register a new user and return JWT token
-        /// </summary>
-        public async Task<UserDto?> RegisterAsync(RegisterDto dto)
+        User user = new()
         {
-            if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
-                return null;
+            Email = request.Email,
+            UserName = request.Username,
+            SecurityStamp = Guid.NewGuid().ToString()
+        };
 
-            var user = new User
-            {
-                FirstName = dto.FirstName,
-                LastName = dto.LastName,
-                Email = dto.Email,
-                PasswordHash = HashPassword(dto.Password),
-                Timestamp = DateTime.UtcNow
-            };
+        var result = await _userManager.CreateAsync(user, request.Password);
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            var token = GenerateJwtToken(user);
-
-            return new UserDto
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Token = token
-            };
+        if(!result.Succeeded)
+        {
+            throw new ArgumentException($"Unable to register user {request.Username} errors: {GetErrorsText(result.Errors)}");
         }
 
-        /// <summary>
-        /// Login user and return JWT token
-        /// </summary>
-        public async Task<UserDto?> LoginAsync(LoginDto dto)
+        return await Login(new LoginRequest { Username = request.Email, Password = request.Password });
+    }
+
+    public async Task<string> Login(LoginRequest request)
+    {
+        var user = await _userManager.FindByNameAsync(request.Username);
+
+        if(user is null)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-            if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
-                return null;
-
-            var token = GenerateJwtToken(user);
-
-            return new UserDto
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Token = token
-            };
+            user = await _userManager.FindByEmailAsync(request.Username);
         }
 
-        /// <summary>
-        /// Get all users (passwords are not returned)
-        /// </summary>
-        public async Task<List<UserDto>> GetAllUsersAsync()
+        if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password))
         {
-            return await _context.Users
-                .Select(u => new UserDto
-                {
-                    Id = u.Id,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    Email = u.Email,
-                    Token = null // Only return token on login/register
-                })
-                .ToListAsync();
+            throw new ArgumentException($"Unable to authenticate user {request.Username}");
         }
 
-        /// <summary>
-        /// Update existing user
-        /// </summary>
-        public async Task<UserDto?> UpdateUserAsync(int userId, UpdateUserDto dto)
+        var authClaims = new List<Claim>
         {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return null;
+            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.Email, user.Email),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        };
 
-            user.FirstName = dto.FirstName ?? user.FirstName;
-            user.LastName = dto.LastName ?? user.LastName;
+        var token = GetToken(authClaims);
 
-            await _context.SaveChangesAsync();
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
-            // Optional: generate new token if needed
-            var token = GenerateJwtToken(user);
+    private JwtSecurityToken GetToken(IEnumerable<Claim> authClaims)
+    {
+        var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
 
-            return new UserDto
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Token = token
-            };
-        }
+        var token = new JwtSecurityToken(
+            issuer: _configuration["JWT:ValidIssuer"],
+            audience: _configuration["JWT:ValidAudience"],
+            expires: DateTime.Now.AddHours(3),
+            claims: authClaims,
+            signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
 
-        /// <summary>
-        /// Delete a user
-        /// </summary>
-        public async Task<bool> DeleteUserAsync(int userId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null) return false;
+        return token;
+    }
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        #region Private Helpers
-
-        private string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
-        }
-
-        private bool VerifyPassword(string password, string hash)
-        {
-            return HashPassword(password) == hash;
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            var jwtSettings = _config.GetSection("Jwt");
-            var key = Encoding.ASCII.GetBytes(jwtSettings.GetValue<string>("Key") 
-                                              ?? throw new Exception("JWT Key missing"));
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Name, user.FirstName),
-                    new Claim(ClaimTypes.Email, user.Email)
-                }),
-                Expires = DateTime.UtcNow.AddHours(1),
-                Issuer = jwtSettings.GetValue<string>("Issuer"),
-                Audience = jwtSettings.GetValue<string>("Audience"),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature
-                )
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
-        }
-
-        #endregion
+    private string GetErrorsText(IEnumerable<IdentityError> errors)
+    {
+        return string.Join(", ", errors.Select(error => error.Description).ToArray());
     }
 }
