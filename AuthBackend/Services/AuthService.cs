@@ -1,92 +1,109 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using AuthenticationApi.Dtos;
+using AuthenticationApi.DTOs;
 using AuthenticationApi.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
-namespace AuthenticationApi.Services;
-
-public class AuthenticationService : IAuthenticationService
+namespace AuthenticationApi.Services
 {
-    private readonly UserManager<User> _userManager;
-    private readonly IConfiguration _configuration;
-
-    public AuthenticationService (UserManager<User> userManager, IConfiguration configuration)
+    /// <summary>
+    /// Handles user registration, login, and JWT generation
+    /// </summary>
+    public class AuthenticationService : IAuthenticationService
     {
-        _userManager = userManager;
-        _configuration = configuration;
-    }
+        private readonly UserManager<User> _userManager;
+        private readonly IConfiguration _configuration;
 
-    public async Task<string> Register(RegisterRequest request)
-    {
-        var userByEmail = await _userManager.FindByEmailAsync(request.Email);
-        var userByUsername = await _userManager.FindByNameAsync(request.Username);
-        if (userByEmail is not null || userByUsername is not null)
+        public AuthenticationService(
+            UserManager<User> userManager,
+            IConfiguration configuration)
         {
-            throw new ArgumentException($"User with email {request.Email} or username {request.Username} already exists.");
+            _userManager = userManager;
+            _configuration = configuration;
         }
 
-        User user = new()
+        /// <summary>
+        /// Registers a new user
+        /// </summary>
+        public async Task RegisterAsync(RegisterDto request)
         {
-            Email = request.Email,
-            UserName = request.Username,
-            SecurityStamp = Guid.NewGuid().ToString()
-        };
+            var existingUser =
+                await _userManager.FindByEmailAsync(request.Email)
+                ?? await _userManager.FindByNameAsync(request.Username);
 
-        var result = await _userManager.CreateAsync(user, request.Password);
+            if (existingUser != null)
+            {
+                throw new ArgumentException("User already exists");
+            }
 
-        if(!result.Succeeded)
-        {
-            throw new ArgumentException($"Unable to register user {request.Username} errors: {GetErrorsText(result.Errors)}");
+            var user = new User
+            {
+                UserName = request.Username,
+                Email = request.Email,
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+
+            var result = await _userManager.CreateAsync(user, request.Password);
+
+            if (!result.Succeeded)
+            {
+                throw new ArgumentException(GetErrors(result.Errors));
+            }
         }
 
-        return await Login(new LoginRequest { Username = request.Email, Password = request.Password });
-    }
-
-    public async Task<string> Login(LoginRequest request)
-    {
-        var user = await _userManager.FindByNameAsync(request.Username);
-
-        if(user is null)
+        /// <summary>
+        /// Authenticates a user and returns a JWT token
+        /// </summary>
+        public async Task<string> LoginAsync(LoginDto request)
         {
-            user = await _userManager.FindByEmailAsync(request.Username);
+            var user =
+                await _userManager.FindByNameAsync(request.Username)
+                ?? await _userManager.FindByEmailAsync(request.Username);
+
+            if (user == null ||
+                !await _userManager.CheckPasswordAsync(user, request.Password))
+            {
+                throw new ArgumentException("Invalid credentials");
+            }
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.UserName!),
+                new Claim(ClaimTypes.Email, user.Email!),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            return GenerateJwtToken(claims);
         }
 
-        if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password))
+        /// <summary>
+        /// Generates JWT token
+        /// </summary>
+        private string GenerateJwtToken(IEnumerable<Claim> claims)
         {
-            throw new ArgumentException($"Unable to authenticate user {request.Username}");
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]!)
+            );
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: DateTime.UtcNow.AddHours(3),
+                claims: claims,
+                signingCredentials: new SigningCredentials(
+                    key,
+                    SecurityAlgorithms.HmacSha256)
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        var authClaims = new List<Claim>
+        private static string GetErrors(IEnumerable<IdentityError> errors)
         {
-            new(ClaimTypes.Name, user.UserName),
-            new(ClaimTypes.Email, user.Email),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-
-        var token = GetToken(authClaims);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private JwtSecurityToken GetToken(IEnumerable<Claim> authClaims)
-    {
-        var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"]));
-
-        var token = new JwtSecurityToken(
-            issuer: _configuration["JWT:ValidIssuer"],
-            audience: _configuration["JWT:ValidAudience"],
-            expires: DateTime.Now.AddHours(3),
-            claims: authClaims,
-            signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
-
-        return token;
-    }
-
-    private string GetErrorsText(IEnumerable<IdentityError> errors)
-    {
-        return string.Join(", ", errors.Select(error => error.Description).ToArray());
+            return string.Join(", ", errors.Select(e => e.Description));
+        }
     }
 }
