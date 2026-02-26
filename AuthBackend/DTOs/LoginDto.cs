@@ -1,11 +1,22 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace AuthenticationApi.Dtos;
-
-public class LoginRequest
+namespace AuthenticationApi.DTOs
 {
-    [Required]
-    public string? Username { get; set; }
-    [Required]
-    public string? Password { get; set; }
+    /// <summary>
+    /// Data required to authenticate a user
+    /// </summary>
+    public class LoginDto
+    {
+        /// <summary>
+        /// Username of the user
+        /// </summary>
+        [Required(ErrorMessage = "Username is required")]
+        public string Username { get; set; } = string.Empty;
+
+        /// <summary>
+        /// User password
+        /// </summary>
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = string.Empty;
+    }
 }
