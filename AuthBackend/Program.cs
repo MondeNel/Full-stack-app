@@ -1,118 +1,132 @@
 using System.Text;
-using AuthenticationApi.Db;
+using AuthenticationApi.Data;
 using AuthenticationApi.Entities;
+using AuthenticationApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 
+/// <summary>
+/// Entry point of the Authentication API application.
+/// Configures services, middleware, and runs the app.
+/// </summary>
 var builder = WebApplication.CreateBuilder(args);
+
+/// <summary>
+/// Provides access to configuration from appsettings.json
+/// </summary>
 var configuration = builder.Configuration;
 
-// 1. DbContext
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("db")));
+#region Configure Services
 
-// 2. Identity
+/// <summary>
+/// 1️⃣ Configure PostgreSQL DbContext using Entity Framework Core
+/// This connects to the PostgreSQL database specified in appsettings.json.
+/// </summary>
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+
+/// <summary>
+/// 2️⃣ Configure ASP.NET Identity
+/// Provides built-in user management, password hashing, and authentication tables.
+/// Uses the AppDbContext for storing users and roles.
+/// </summary>
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-// 3. Adding Authentication
+/// <summary>
+/// 3️⃣ Configure JWT Authentication
+/// Sets up authentication to use JWT Bearer tokens.
+/// Validates issuer, audience, and signing key from configuration.
+/// </summary>
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-
-// 4. Adding Jwt Bearer
-    .AddJwtBearer(options =>
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;                 // Saves token for reuse
+    options.RequireHttpsMetadata = false;     // For development; enable HTTPS in production
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.SaveToken = true;
-        options.RequireHttpsMetadata = false;
-        options.TokenValidationParameters = new TokenValidationParameters()
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidAudience = configuration["JWT:ValidAudience"],
-            ValidIssuer = configuration["JWT:ValidIssuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]))
-        };
-    });
+        ValidateIssuer = true,                // Ensure token is from a trusted issuer
+        ValidateAudience = true,              // Ensure token is intended for our audience
+        ValidIssuer = configuration["JWT:ValidIssuer"],
+        ValidAudience = configuration["JWT:ValidAudience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!)) // Secret key for signing
+    };
+});
 
+/// <summary>
+/// 4️⃣ Register application services
+/// Adds our custom AuthenticationService for dependency injection
+/// </summary>
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
+/// <summary>
+/// 5️⃣ Add Controllers
+/// Enables use of API controllers for routing requests
+/// </summary>
 builder.Services.AddControllers();
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-// 5. Swagger authentication
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Wedding Planner API", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 
-                      Enter 'Bearer' [space] and then your token in the text input below.
-                      \r\n\r\nExample: 'Bearer 12345abcdef'",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header,
-
-            },
-            new List<string>()
-        }
-    });
-});
-
-// 6. Add CORS policy
+/// <summary>
+/// 6️⃣ Configure CORS (Cross-Origin Resource Sharing)
+/// Allows frontend development on localhost:3000 (React app)
+/// to access the API without CORS issues
+/// </summary>
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAngularDevClient",
-        b =>
-        {
-            b
-                .WithOrigins("http://localhost:4200")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+    options.AddPolicy("AllowReactDevClient", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
 
+#endregion
+
+/// <summary>
+/// Build the application with the configured services
+/// </summary>
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+#region Configure Middleware
 
-//7. Use CORS
-app.UseCors("AllowAngularDevClient");
+/// <summary>
+/// Use CORS policy defined above
+/// </summary>
+app.UseCors("AllowReactDevClient");
+
+/// <summary>
+/// Redirect HTTP requests to HTTPS
+/// </summary>
 app.UseHttpsRedirection();
 
-// 8. Authentication
+/// <summary>
+/// Enable authentication middleware
+/// Validates JWT tokens in incoming requests
+/// </summary>
 app.UseAuthentication();
+
+/// <summary>
+/// Enable authorization middleware
+/// Checks user permissions for protected endpoints
+/// </summary>
 app.UseAuthorization();
 
+/// <summary>
+/// Map controller routes (API endpoints)
+/// </summary>
 app.MapControllers();
 
+#endregion
+
+/// <summary>
+/// Run the application
+/// </summary>
 app.Run();
