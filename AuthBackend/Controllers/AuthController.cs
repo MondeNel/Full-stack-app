@@ -1,102 +1,42 @@
-using Microsoft.AspNetCore.Mvc;
-using AuthBackend.Services;
-using AuthBackend.DTOs;
+using AuthenticationApi.Dtos;
+using AuthenticationApi.Services;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 
-namespace AuthBackend.Controllers
+namespace AuthenticationApi.Controllers;
+
+[ApiController]
+[Route("[controller]")]
+public class UserController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    private readonly IAuthenticationService _authenticationService;
+
+    public UserController(IAuthenticationService authenticationService)
     {
-        private readonly AuthService _authService;
+        _authenticationService = authenticationService;
+    }
 
-        public AuthController(AuthService authService)
-        {
-            _authService = authService;
-        }
+    [AllowAnonymous]
+    [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var response = await _authenticationService.Login(request);
 
-        /// <summary>
-        /// Register a new user
-        /// Returns user info + JWT token
-        /// </summary>
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
-        {
-            var user = await _authService.RegisterAsync(dto);
-            if (user == null) return BadRequest(new { message = "Email already in use." });
-            return Ok(user);
-        }
+        return Ok(response);
+    }
 
-        /// <summary>
-        /// Login a user
-        /// Returns user info + JWT token
-        /// </summary>
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        {
-            var user = await _authService.LoginAsync(dto);
-            if (user == null) return Unauthorized(new { message = "Invalid credentials." });
-            return Ok(user);
-        }
+    [AllowAnonymous]
+    [HttpPost("register")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(string))]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        var response = await _authenticationService.Register(request);
 
-        /// <summary>
-        /// Get currently logged-in user info
-        /// Requires Authorization header with Bearer token
-        /// </summary>
-        [HttpGet("me")]
-        [Authorize]
-        public IActionResult Me()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var email = User.FindFirstValue(ClaimTypes.Email);
-            var firstName = User.FindFirstValue(ClaimTypes.Name);
-
-            return Ok(new
-            {
-                Id = userId,
-                FirstName = firstName,
-                Email = email
-            });
-        }
-
-        /// <summary>
-        /// Get all users
-        /// Requires Authorization header with Bearer token
-        /// </summary>
-        [HttpGet("users")]
-        [Authorize]
-        public async Task<IActionResult> GetAllUsers()
-        {
-            var users = await _authService.GetAllUsersAsync();
-            return Ok(users);
-        }
-
-        /// <summary>
-        /// Update a user by ID
-        /// Returns updated user info + new JWT token
-        /// </summary>
-        [HttpPut("{id:int}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto dto)
-        {
-            var updatedUser = await _authService.UpdateUserAsync(id, dto);
-            if (updatedUser == null) return NotFound(new { message = "User not found." });
-            return Ok(updatedUser);
-        }
-
-        /// <summary>
-        /// Delete a user by ID
-        /// Requires Authorization header with Bearer token
-        /// </summary>
-        [HttpDelete("{id:int}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteUser(int id)
-        {
-            var deleted = await _authService.DeleteUserAsync(id);
-            if (!deleted) return NotFound(new { message = "User not found." });
-            return Ok(new { message = "User deleted successfully." });
-        }
+        return Ok(response);
     }
 }
