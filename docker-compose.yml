@@ -1,49 +1,36 @@
-# Docker Compose file for AuthBackend API + PostgreSQL
-# Automatically applies EF Core migrations when API container starts
-
-version: "3.9"  # Docker Compose version (warning is harmless, can be removed if desired)
-
 services:
-  # ---------- API Service ----------
   api:
-    build: .  # Build Dockerfile in current directory
+    build:
+      context: ./AuthBackend
     ports:
-      - "5000:5000"  # Expose API on host port 5000
+      - "5000:5000"
     environment:
-      # ASP.NET Core environment
       - ASPNETCORE_ENVIRONMENT=Development
-
-      # Connection string to PostgreSQL container (Host = db service)
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=authdb;Username=postgres;Password=admin123
-
-      # JWT configuration
       - JWT__Secret=supersecretkey123456
       - JWT__ValidIssuer=AuthBackend
       - JWT__ValidAudience=AuthClient
     depends_on:
-      - db  # Ensure PostgreSQL starts first
+      - db
     command: >
       /bin/sh -c "
-      # Wait for DB to be ready, then apply migrations, then start API
-      until dotnet ef database update; do
-        echo 'Waiting for database...'; 
-        sleep 5; 
+      until dotnet ef database update --no-build --project AuthBackend.csproj; do
+        echo 'Waiting for database...';
+        sleep 5;
       done;
       dotnet AuthBackend.dll
       "
 
-  # ---------- PostgreSQL Service ----------
   db:
-    image: postgres:15  # Use official PostgreSQL image
+    image: postgres:15
     environment:
       POSTGRES_DB: authdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin123
     ports:
-      - "5432:5432"  # Expose DB to host
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Persist DB data across container restarts
+      - postgres_data:/var/lib/postgresql/data
 
-# ---------- Docker Volumes ----------
 volumes:
-  postgres_data:  # Named volume to persist database data
+  postgres_data:
