@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AuthenticationApi.DTOs;
 using AuthenticationApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +18,7 @@ namespace AuthenticationApi.Controllers
         }
 
         /// <summary>
-        /// Authenticates a user and returns a JWT token
+        /// Authenticates a user and returns a JWT token.
         /// </summary>
         /// <param name="request">User login credentials</param>
         /// <returns>JWT token</returns>
@@ -30,7 +31,7 @@ namespace AuthenticationApi.Controllers
         }
 
         /// <summary>
-        /// Registers a new user
+        /// Registers a new user.
         /// </summary>
         /// <param name="request">User registration data</param>
         /// <returns>Success message</returns>
@@ -43,14 +44,22 @@ namespace AuthenticationApi.Controllers
         }
 
         /// <summary>
-        /// Protected test endpoint
+        /// Retrieves details of the currently authenticated user.
+        /// Requires a valid JWT token.
         /// </summary>
-        /// <returns>Authorized message</returns>
+        /// <returns>Authenticated user's details</returns>
         [Authorize]
         [HttpGet("me")]
-        public IActionResult Me()
+        public IActionResult GetCurrentUser()
         {
-            return Ok(new { message = "You are authorized" });
+            var username = User.FindFirstValue(ClaimTypes.Name);
+            var email = User.FindFirstValue(ClaimTypes.Email);
+
+            return Ok(new
+            {
+                username,
+                email
+            });
         }
     }
 }
