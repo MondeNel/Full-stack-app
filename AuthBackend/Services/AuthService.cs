@@ -30,6 +30,7 @@ namespace AuthenticationApi.Services
         /// </summary>
         public async Task RegisterAsync(RegisterDto request)
         {
+            // Check if user exists by email or username
             var existingUser =
                 await _userManager.FindByEmailAsync(request.Email)
                 ?? await _userManager.FindByNameAsync(request.Username);
@@ -59,12 +60,12 @@ namespace AuthenticationApi.Services
         /// </summary>
         public async Task<string> LoginAsync(LoginDto request)
         {
+            // Find user by username or email
             var user =
                 await _userManager.FindByNameAsync(request.Username)
                 ?? await _userManager.FindByEmailAsync(request.Username);
 
-            if (user == null ||
-                !await _userManager.CheckPasswordAsync(user, request.Password))
+            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
             {
                 throw new ArgumentException("Invalid credentials");
             }
@@ -93,14 +94,15 @@ namespace AuthenticationApi.Services
                 audience: _configuration["JWT:ValidAudience"],
                 expires: DateTime.UtcNow.AddHours(3),
                 claims: claims,
-                signingCredentials: new SigningCredentials(
-                    key,
-                    SecurityAlgorithms.HmacSha256)
+                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        /// <summary>
+        /// Extracts error messages from IdentityError list
+        /// </summary>
         private static string GetErrors(IEnumerable<IdentityError> errors)
         {
             return string.Join(", ", errors.Select(e => e.Description));
