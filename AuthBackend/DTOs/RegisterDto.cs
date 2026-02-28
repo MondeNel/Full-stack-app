@@ -3,25 +3,28 @@ using System.ComponentModel.DataAnnotations;
 namespace AuthenticationApi.DTOs
 {
     /// <summary>
-    /// Data required to register a new user
+    /// Represents the data required to register a new user.
+    /// Used for input validation on the registration endpoint.
     /// </summary>
     public class RegisterDto
     {
         /// <summary>
-        /// Unique username
+        /// Unique username chosen by the user.
+        /// Example: "johndoe"
         /// </summary>
         [Required(ErrorMessage = "Username is required")]
         public string Username { get; set; } = string.Empty;
 
         /// <summary>
-        /// User email address
+        /// User's email address.
+        /// Example: "user@example.com"
         /// </summary>
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
         public string Email { get; set; } = string.Empty;
 
         /// <summary>
-        /// User password
+        /// User's password (minimum 6 characters).
         /// </summary>
         [Required(ErrorMessage = "Password is required")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
