@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   api:
     build:
@@ -5,11 +7,11 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=authdb;Username=postgres;Password=admin123
-      - JWT__Secret=supersecretkey123456
-      - JWT__ValidIssuer=AuthBackend
-      - JWT__ValidAudience=AuthClient
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=authdb;Username=postgres;Password=admin123
+      JWT__Secret: supersecretkey123456
+      JWT__ValidIssuer: AuthBackend
+      JWT__ValidAudience: AuthClient
     depends_on:
       - db
     command: >
