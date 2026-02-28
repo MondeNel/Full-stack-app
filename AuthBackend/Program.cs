@@ -1,6 +1,6 @@
 using System.Text;
 using AuthenticationApi.Data;
-using AuthenticationApi.Entities;
+using AuthenticationApi.Models;
 using AuthenticationApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -13,34 +13,23 @@ using Microsoft.IdentityModel.Tokens;
 /// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
-/// <summary>
-/// Provides access to configuration from appsettings.json
-/// </summary>
 var configuration = builder.Configuration;
 
 #region Configure Services
 
-/// <summary>
-/// 1️⃣ Configure PostgreSQL DbContext using Entity Framework Core
-/// This connects to the PostgreSQL database specified in appsettings.json.
-/// </summary>
+// Configure PostgreSQL DbContext using Entity Framework Core
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
-/// <summary>
-/// 2️⃣ Configure ASP.NET Identity
-/// Provides built-in user management, password hashing, and authentication tables.
-/// Uses the AppDbContext for storing users and roles.
-/// </summary>
+// Configure ASP.NET Identity for User management
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-/// <summary>
-/// 3️⃣ Configure JWT Authentication
-/// Sets up authentication to use JWT Bearer tokens.
-/// Validates issuer, audience, and signing key from configuration.
-/// </summary>
+// Configure JWT Authentication
+var jwtSecret = configuration["JWT:Secret"]
+    ?? throw new InvalidOperationException("JWT Secret is not configured.");
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -48,36 +37,25 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.SaveToken = true;                 // Saves token for reuse
-    options.RequireHttpsMetadata = false;     // For development; enable HTTPS in production
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false; // For development; enable HTTPS in production
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,                // Ensure token is from a trusted issuer
-        ValidateAudience = true,              // Ensure token is intended for our audience
+        ValidateIssuer = true,
+        ValidateAudience = true,
         ValidIssuer = configuration["JWT:ValidIssuer"],
         ValidAudience = configuration["JWT:ValidAudience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!)) // Secret key for signing
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     };
 });
 
-/// <summary>
-/// 4️⃣ Register application services
-/// Adds our custom AuthenticationService for dependency injection
-/// </summary>
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+// Register application services
+builder.Services.AddScoped<IAuthenticationService, AuthService>();
 
-/// <summary>
-/// 5️⃣ Add Controllers
-/// Enables use of API controllers for routing requests
-/// </summary>
+// Add Controllers
 builder.Services.AddControllers();
 
-/// <summary>
-/// 6️⃣ Configure CORS (Cross-Origin Resource Sharing)
-/// Allows frontend development on localhost:3000 (React app)
-/// to access the API without CORS issues
-/// </summary>
+// Configure CORS for frontend development
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactDevClient", policy =>
@@ -90,43 +68,16 @@ builder.Services.AddCors(options =>
 
 #endregion
 
-/// <summary>
-/// Build the application with the configured services
-/// </summary>
 var app = builder.Build();
 
 #region Configure Middleware
 
-/// <summary>
-/// Use CORS policy defined above
-/// </summary>
 app.UseCors("AllowReactDevClient");
-
-/// <summary>
-/// Redirect HTTP requests to HTTPS
-/// </summary>
 app.UseHttpsRedirection();
-
-/// <summary>
-/// Enable authentication middleware
-/// Validates JWT tokens in incoming requests
-/// </summary>
 app.UseAuthentication();
-
-/// <summary>
-/// Enable authorization middleware
-/// Checks user permissions for protected endpoints
-/// </summary>
 app.UseAuthorization();
-
-/// <summary>
-/// Map controller routes (API endpoints)
-/// </summary>
 app.MapControllers();
 
 #endregion
 
-/// <summary>
-/// Run the application
-/// </summary>
 app.Run();
