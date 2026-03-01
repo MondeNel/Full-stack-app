@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5277"; // Connecting to backend URL
+const API_URL = "http://localhost:5000"; // Connecting to backend URL
 
 /**
  * Register a new user

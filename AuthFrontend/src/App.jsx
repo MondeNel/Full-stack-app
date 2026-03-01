@@ -4,19 +4,16 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import UserDetails from "./pages/UserDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NavBar from "./components/NavBar";
 
 function App() {
   return (
     <Router>
+      <NavBar />
       <Routes>
-        {/* Home page at root */}
         <Route path="/" element={<Home />} />
-
-        {/* Public pages */}
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-
-        {/* Protected page */}
         <Route
           path="/user"
           element={

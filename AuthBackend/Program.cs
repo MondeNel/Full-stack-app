@@ -6,20 +6,28 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore.InMemory;
 
-/// <summary>
-/// Entry point of the Authentication API application.
-/// Configures services, middleware, and runs the app.
-/// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
 var configuration = builder.Configuration;
 
 #region Configure Services
 
-// Configure PostgreSQL DbContext using Entity Framework Core
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+// Configure DbContext - supports swapping for tests via environment
+var connectionString = configuration.GetConnectionString("DefaultConnection");
+var isTestEnvironment = builder.Environment.EnvironmentName == "Testing";
+
+if (!isTestEnvironment)
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
+else
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseInMemoryDatabase("TestDb"));
+}
 
 // Configure ASP.NET Identity for User management
 builder.Services.AddIdentity<User, IdentityRole>()
@@ -60,7 +68,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactDevClient", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });

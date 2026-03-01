@@ -1,65 +1,56 @@
 using System.Net;
 using System.Net.Http.Json;
 using AuthenticationApi.DTOs;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using AuthenticationApi.Data;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace AuthenticationApi.Tests
 {
     /// <summary>
-    /// Integration tests for the Authentication API.
-    /// Spins up a real in-memory test server and verifies
-    /// end-to-end HTTP behaviour for register, login, and user detail endpoints.
+    /// Custom WebApplicationFactory that sets the environment to Testing
+    /// so Program.cs uses the in-memory database instead of PostgreSQL.
     /// </summary>
-    public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+    public class TestWebApplicationFactory : WebApplicationFactory<Program>
     {
-        private readonly HttpClient _client;
-        private readonly WebApplicationFactory<Program> _factory;
-
-        /// <summary>
-        /// Sets up the test server with an in-memory database
-        /// replacing the real PostgreSQL connection.
-        /// </summary>
-        public AuthIntegrationTests(WebApplicationFactory<Program> factory)
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            _factory = factory.WithWebHostBuilder(builder =>
+            // This tells Program.cs to use InMemory database
+            builder.UseEnvironment("Testing");
+
+            builder.ConfigureServices(services =>
             {
-                builder.ConfigureServices(services =>
+                // Relax Identity password requirements for tests
+                services.Configure<IdentityOptions>(options =>
                 {
-                    // Remove ALL DbContext registrations
-                    var descriptors = services.Where(
-                        d => d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
-                             d.ServiceType == typeof(DbContextOptions) ||
-                             d.ServiceType == typeof(AppDbContext)).ToList();
-
-                    foreach (var descriptor in descriptors)
-                        services.Remove(descriptor);
-
-                    // Add in-memory database
-                    services.AddDbContext<AppDbContext>(options =>
-                        options.UseInMemoryDatabase("TestDb_" + Guid.NewGuid()));
-
-                    // Relax Identity password requirements for tests
-                    services.Configure<IdentityOptions>(options =>
-                    {
-                        options.Password.RequireDigit = false;
-                        options.Password.RequireLowercase = false;
-                        options.Password.RequireUppercase = false;
-                        options.Password.RequireNonAlphanumeric = false;
-                        options.Password.RequiredLength = 6;
-                    });
+                    options.Password.RequireDigit = false;
+                    options.Password.RequireLowercase = false;
+                    options.Password.RequireUppercase = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                    options.Password.RequiredLength = 6;
                 });
-
-                builder.UseSetting("JWT:Secret", "SuperSecretKey12345SuperSecretKey12345");
-                builder.UseSetting("JWT:ValidIssuer", "AuthBackend");
-                builder.UseSetting("JWT:ValidAudience", "AuthBackendUsers");
             });
 
-            _client = _factory.CreateClient();
+            builder.UseSetting("JWT:Secret", "SuperSecretKey12345SuperSecretKey12345");
+            builder.UseSetting("JWT:ValidIssuer", "AuthBackend");
+            builder.UseSetting("JWT:ValidAudience", "AuthBackendUsers");
+        }
+    }
+
+    /// <summary>
+    /// Integration tests for the Authentication API.
+    /// </summary>
+    public class AuthIntegrationTests : IClassFixture<TestWebApplicationFactory>
+    {
+        private readonly HttpClient _client;
+        private readonly TestWebApplicationFactory _factory;
+
+        public AuthIntegrationTests(TestWebApplicationFactory factory)
+        {
+            _factory = factory;
+            _client = factory.CreateClient();
         }
 
         // ─── Register Endpoint Tests ───────────────────────────────────────
@@ -71,20 +62,17 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task Register_ValidRequest_Returns200()
         {
-            // Arrange
             var dto = new RegisterDto
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Username = "johndoe",
-                Email = "john@example.com",
+                Username = "johndoe_" + Guid.NewGuid(),
+                Email = $"john_{Guid.NewGuid()}@example.com",
                 Password = "password123"
             };
 
-            // Act
             var response = await _client.PostAsJsonAsync("/api/auth/register", dto);
 
-            // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
@@ -95,21 +83,18 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task Register_DuplicateUser_Returns400()
         {
-            // Arrange
             var dto = new RegisterDto
             {
                 FirstName = "Jane",
                 LastName = "Doe",
-                Username = "janedoe",
-                Email = "jane@example.com",
+                Username = "janedoe_" + Guid.NewGuid(),
+                Email = $"jane_{Guid.NewGuid()}@example.com",
                 Password = "password123"
             };
 
-            // Act - register twice
             await _client.PostAsJsonAsync("/api/auth/register", dto);
             var response = await _client.PostAsJsonAsync("/api/auth/register", dto);
 
-            // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -120,13 +105,10 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task Register_MissingFields_Returns400()
         {
-            // Arrange - missing required fields
             var dto = new { FirstName = "John", LastName = "Doe" };
 
-            // Act
             var response = await _client.PostAsJsonAsync("/api/auth/register", dto);
 
-            // Assert
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -139,28 +121,28 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task Login_ValidCredentials_Returns200WithToken()
         {
-            // Arrange - first register a user
+            var username = "johnsmith_" + Guid.NewGuid();
+            var email = $"johnsmith_{Guid.NewGuid()}@example.com";
+
             var registerDto = new RegisterDto
             {
                 FirstName = "John",
                 LastName = "Smith",
-                Username = "johnsmith",
-                Email = "johnsmith@example.com",
+                Username = username,
+                Email = email,
                 Password = "password123"
             };
             await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
             var loginDto = new LoginDto
             {
-                Username = "johnsmith",
+                Username = username,
                 Password = "password123"
             };
 
-            // Act
             var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
             var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
 
-            // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(body);
             Assert.True(body.ContainsKey("accessToken"));
@@ -174,17 +156,14 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task Login_InvalidCredentials_Returns401()
         {
-            // Arrange
             var loginDto = new LoginDto
             {
-                Username = "nonexistent",
+                Username = "nonexistent_" + Guid.NewGuid(),
                 Password = "wrongpassword"
             };
 
-            // Act
             var response = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
 
-            // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
@@ -197,10 +176,8 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task GetCurrentUser_NoToken_Returns401()
         {
-            // Act
             var response = await _client.GetAsync("/api/auth/me");
 
-            // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
@@ -211,37 +188,33 @@ namespace AuthenticationApi.Tests
         [Fact]
         public async Task GetCurrentUser_ValidToken_Returns200WithUserDetails()
         {
-            // Arrange - register and login to get token
+            var username = "alicesmith_" + Guid.NewGuid();
+            var email = $"alice_{Guid.NewGuid()}@example.com";
+
             var registerDto = new RegisterDto
             {
                 FirstName = "Alice",
                 LastName = "Smith",
-                Username = "alicesmith",
-                Email = "alice@example.com",
+                Username = username,
+                Email = email,
                 Password = "password123"
             };
             await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
-            var loginDto = new LoginDto
-            {
-                Username = "alicesmith",
-                Password = "password123"
-            };
+            var loginDto = new LoginDto { Username = username, Password = "password123" };
             var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
             var loginBody = await loginResponse.Content.ReadFromJsonAsync<Dictionary<string, string>>();
             var token = loginBody!["accessToken"];
 
-            // Act - call /me with token
             var client = _factory.CreateClient();
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var response = await client.GetAsync("/api/auth/me");
             var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
 
-            // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(body);
-            Assert.Equal("alice@example.com", body["email"]);
+            Assert.Equal(email, body["email"]);
             Assert.Equal("Alice", body["firstName"]);
             Assert.Equal("Smith", body["lastName"]);
         }
