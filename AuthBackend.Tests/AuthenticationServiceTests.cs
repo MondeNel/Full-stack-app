@@ -55,7 +55,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "Test",
                 LastName = "User",
-                Username = "test",
                 Email = "test@test.com",
                 Password = "password123"
             };
@@ -140,14 +139,14 @@ namespace AuthenticationApi.Tests
         public async Task LoginAsync_UserNotFound_ThrowsUnauthorizedAccessException()
         {
             // Arrange
-            _mockUserManager.Setup(u => u.FindByNameAsync(It.IsAny<string>()))
-                .ReturnsAsync((User)null!);
             _mockUserManager.Setup(u => u.FindByEmailAsync(It.IsAny<string>()))
+                .ReturnsAsync((User)null!);
+            _mockUserManager.Setup(u => u.FindByNameAsync(It.IsAny<string>()))
                 .ReturnsAsync((User)null!);
 
             var dto = new LoginDto
             {
-                Username = "nonexistent",
+                Email = "nonexistent@test.com",
                 Password = "password123"
             };
 
@@ -166,14 +165,14 @@ namespace AuthenticationApi.Tests
         {
             // Arrange
             var user = new User { UserName = "johndoe", Email = "john@example.com" };
-            _mockUserManager.Setup(u => u.FindByNameAsync(It.IsAny<string>()))
+            _mockUserManager.Setup(u => u.FindByEmailAsync(It.IsAny<string>()))
                 .ReturnsAsync(user);
             _mockUserManager.Setup(u => u.CheckPasswordAsync(user, It.IsAny<string>()))
                 .ReturnsAsync(false);
 
             var dto = new LoginDto
             {
-                Username = "johndoe",
+                Email = "john@example.com",
                 Password = "wrongpassword"
             };
 
@@ -198,14 +197,14 @@ namespace AuthenticationApi.Tests
                 FirstName = "John",
                 LastName = "Doe"
             };
-            _mockUserManager.Setup(u => u.FindByNameAsync(It.IsAny<string>()))
+            _mockUserManager.Setup(u => u.FindByEmailAsync(It.IsAny<string>()))
                 .ReturnsAsync(user);
             _mockUserManager.Setup(u => u.CheckPasswordAsync(user, It.IsAny<string>()))
                 .ReturnsAsync(true);
 
             var dto = new LoginDto
             {
-                Username = "johndoe",
+                Email = "john@example.com",
                 Password = "password123"
             };
 

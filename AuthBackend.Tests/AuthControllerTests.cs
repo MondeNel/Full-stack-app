@@ -43,7 +43,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Username = "johndoe",
                 Email = "john@example.com",
                 Password = "password123"
             };
@@ -70,7 +69,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Username = "johndoe",
                 Email = "john@example.com",
                 Password = "password123"
             };
@@ -97,7 +95,7 @@ namespace AuthenticationApi.Tests
 
             var dto = new LoginDto
             {
-                Username = "johndoe",
+                Email = "john@example.com",
                 Password = "password123"
             };
 
@@ -122,7 +120,7 @@ namespace AuthenticationApi.Tests
 
             var dto = new LoginDto
             {
-                Username = "johndoe",
+                Email = "john@example.com",
                 Password = "wrongpassword"
             };
 

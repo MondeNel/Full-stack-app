@@ -5,13 +5,13 @@ services:
     build:
       context: ./AuthBackend
     ports:
-      - "5000:80"
+      - "5277:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=authdb;Username=postgres;Password=admin123
-      JWT__Secret: supersecretkey123456
-      JWT__ValidIssuer: AuthBackend
-      JWT__ValidAudience: AuthClient
+      JWT__Secret: SuperSecretKey12345SuperSecretKey12345
+      JWT__ValidIssuer: http://localhost:5277
+      JWT__ValidAudience: http://localhost:5277
     depends_on:
       - db
     command: >
