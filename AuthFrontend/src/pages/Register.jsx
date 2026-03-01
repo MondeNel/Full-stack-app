@@ -1,17 +1,14 @@
 import { useState } from "react";
 import { registerUser } from "../api/auth";
-import { TextField, Button, Container, Typography, Box, Paper } from "@mui/material";
+import { TextField, Button, Container, Typography, Box, Paper, InputAdornment } from "@mui/material";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import EmailIcon from "@mui/icons-material/Email";
+import LockIcon from "@mui/icons-material/Lock";
 
 const Register = () => {
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,18 +22,44 @@ const Register = () => {
 
   return (
     <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ padding: 4, mt: 8 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Create Account
-        </Typography>
+      <Paper elevation={5} sx={{ padding: 4, mt: 8 }}>
+        <Typography variant="h4" align="center" gutterBottom>Create Account</Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField label="First Name" name="firstName" onChange={handleChange} fullWidth required />
-          <TextField label="Last Name" name="lastName" onChange={handleChange} fullWidth required />
-          <TextField label="Email" name="email" type="email" onChange={handleChange} fullWidth required />
-          <TextField label="Password" name="password" type="password" onChange={handleChange} fullWidth required />
-          <Button type="submit" variant="contained" color="primary" size="large">
-            Register
-          </Button>
+          <TextField
+            label="First Name"
+            name="firstName"
+            onChange={handleChange}
+            fullWidth
+            required
+            InputProps={{ startAdornment: <InputAdornment position="start"><AccountCircle /></InputAdornment> }}
+          />
+          <TextField
+            label="Last Name"
+            name="lastName"
+            onChange={handleChange}
+            fullWidth
+            required
+            InputProps={{ startAdornment: <InputAdornment position="start"><AccountCircle /></InputAdornment> }}
+          />
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            onChange={handleChange}
+            fullWidth
+            required
+            InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon /></InputAdornment> }}
+          />
+          <TextField
+            label="Password"
+            name="password"
+            type="password"
+            onChange={handleChange}
+            fullWidth
+            required
+            InputProps={{ startAdornment: <InputAdornment position="start"><LockIcon /></InputAdornment> }}
+          />
+          <Button type="submit" variant="contained" color="primary" size="large">Register</Button>
         </Box>
       </Paper>
     </Container>
