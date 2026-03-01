@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../api/auth";
-import styles from "./Login.module.css";
+import { TextField, Button, Container, Typography, Box, Paper } from "@mui/material";
 
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -22,25 +22,20 @@ const Login = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.formContainer}>
-      <h1>Login</h1>
-      <input
-        className={styles.inputField}
-        name="email"
-        placeholder="Email"
-        onChange={handleChange}
-      />
-      <input
-        className={styles.inputField}
-        name="password"
-        type="password"
-        placeholder="Password"
-        onChange={handleChange}
-      />
-      <button className={styles.submitButton} type="submit">
-        Login
-      </button>
-    </form>
+    <Container maxWidth="sm">
+      <Paper elevation={3} sx={{ padding: 4, mt: 8 }}>
+        <Typography variant="h4" align="center" gutterBottom>
+          Sign In
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField label="Email" name="email" type="email" onChange={handleChange} fullWidth required />
+          <TextField label="Password" name="password" type="password" onChange={handleChange} fullWidth required />
+          <Button type="submit" variant="contained" color="primary" size="large">
+            Login
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { registerUser } from "../api/auth";
-import styles from "./Register.module.css";
+import { TextField, Button, Container, Typography, Box, Paper } from "@mui/material";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -24,37 +24,22 @@ const Register = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.formContainer}>
-      <h1>Register</h1>
-      <input
-        className={styles.inputField}
-        name="firstName"
-        placeholder="First Name"
-        onChange={handleChange}
-      />
-      <input
-        className={styles.inputField}
-        name="lastName"
-        placeholder="Last Name"
-        onChange={handleChange}
-      />
-      <input
-        className={styles.inputField}
-        name="email"
-        placeholder="Email"
-        onChange={handleChange}
-      />
-      <input
-        className={styles.inputField}
-        name="password"
-        type="password"
-        placeholder="Password"
-        onChange={handleChange}
-      />
-      <button className={styles.submitButton} type="submit">
-        Register
-      </button>
-    </form>
+    <Container maxWidth="sm">
+      <Paper elevation={3} sx={{ padding: 4, mt: 8 }}>
+        <Typography variant="h4" align="center" gutterBottom>
+          Create Account
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField label="First Name" name="firstName" onChange={handleChange} fullWidth required />
+          <TextField label="Last Name" name="lastName" onChange={handleChange} fullWidth required />
+          <TextField label="Email" name="email" type="email" onChange={handleChange} fullWidth required />
+          <TextField label="Password" name="password" type="password" onChange={handleChange} fullWidth required />
+          <Button type="submit" variant="contained" color="primary" size="large">
+            Register
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 
