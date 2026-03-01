@@ -9,11 +9,18 @@ namespace AuthenticationApi.DTOs
     public class RegisterDto
     {
         /// <summary>
-        /// Unique username chosen by the user.
-        /// Example: "johndoe"
+        /// User's first name.
+        /// Example: "John"
         /// </summary>
-        [Required(ErrorMessage = "Username is required")]
-        public string Username { get; set; } = string.Empty;
+        [Required(ErrorMessage = "First name is required")]
+        public string FirstName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// User's last name.
+        /// Example: "Doe"
+        /// </summary>
+        [Required(ErrorMessage = "Last name is required")]
+        public string LastName { get; set; } = string.Empty;
 
         /// <summary>
         /// User's email address.

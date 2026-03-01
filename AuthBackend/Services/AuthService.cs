@@ -40,9 +40,7 @@ namespace AuthenticationApi.Services
         /// </exception>
         public async Task RegisterAsync(RegisterDto request)
         {
-            var existingUser =
-                await _userManager.FindByEmailAsync(request.Email)
-                ?? await _userManager.FindByNameAsync(request.Username);
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
 
             if (existingUser != null)
             {
@@ -51,10 +49,10 @@ namespace AuthenticationApi.Services
 
             var user = new User
             {
-                UserName = request.Username,
+                UserName = request.Email,  // Use email as username for simplicity
                 Email = request.Email,
-                FirstName = string.Empty,  // Default to empty string
-                LastName = string.Empty     // Default to empty string
+                FirstName = request.FirstName,
+                LastName = request.LastName
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
