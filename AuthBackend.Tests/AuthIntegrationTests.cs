@@ -66,7 +66,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Username = "johndoe_" + Guid.NewGuid(),
                 Email = $"john_{Guid.NewGuid()}@example.com",
                 Password = "password123"
             };
@@ -87,7 +86,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "Jane",
                 LastName = "Doe",
-                Username = "janedoe_" + Guid.NewGuid(),
                 Email = $"jane_{Guid.NewGuid()}@example.com",
                 Password = "password123"
             };
@@ -128,7 +126,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "John",
                 LastName = "Smith",
-                Username = username,
                 Email = email,
                 Password = "password123"
             };
@@ -136,7 +133,7 @@ namespace AuthenticationApi.Tests
 
             var loginDto = new LoginDto
             {
-                Username = username,
+                Email = email,
                 Password = "password123"
             };
 
@@ -158,7 +155,7 @@ namespace AuthenticationApi.Tests
         {
             var loginDto = new LoginDto
             {
-                Username = "nonexistent_" + Guid.NewGuid(),
+                Email = "nonexistent_" + Guid.NewGuid() + "@example.com",
                 Password = "wrongpassword"
             };
 
@@ -195,13 +192,12 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "Alice",
                 LastName = "Smith",
-                Username = username,
                 Email = email,
                 Password = "password123"
             };
             await _client.PostAsJsonAsync("/api/auth/register", registerDto);
 
-            var loginDto = new LoginDto { Username = username, Password = "password123" };
+            var loginDto = new LoginDto { Email = email, Password = "password123" };
             var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginDto);
             var loginBody = await loginResponse.Content.ReadFromJsonAsync<Dictionary<string, string>>();
             var token = loginBody!["accessToken"];

@@ -116,10 +116,10 @@ namespace AuthenticationApi.Tests
 
             var dto = new RegisterDto
             {
-                FirstName = "John",
+                FirstName = "Jane",
                 LastName = "Doe",
-                Username = "johndoe",
-                Email = "john@example.com",
+                Username = "janedoe",
+                Email = "jane@example.com",
                 Password = "password123"
             };
 
