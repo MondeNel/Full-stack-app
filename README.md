@@ -4,15 +4,26 @@ React 19 + ASP.NET Core 8.0 + PostgreSQL + Docker
 
 ## 🚀 Quick Start
 
+**Use Git Bash to run all commands**
+
 ### Option 1: Automated Build (Recommended)
 ```bash
+# Navigate to project directory
+cd "c:\Users\monde\Full-stack-app"
+
+# Make script executable
+chmod +x build.sh
+
 # Complete setup with one command
-make all
+./build.sh
 ```
 This runs: clean → restore dependencies → run tests → build → start Docker → health checks
 
 ### Option 2: Manual Setup
 ```bash
+# Navigate to project directory
+cd "c:\Users\monde\Full-stack-app"
+
 # 1. Start database and backend API
 docker-compose up -d --build
 
@@ -25,23 +36,29 @@ npm run dev
 
 ### Option 3: Step-by-Step Manual
 ```bash
-# 1. Restore .NET packages (backend dependencies)
+# Navigate to project directory
+cd "c:\Users\monde\Full-stack-app"
+
+# 1. Clean all projects
+dotnet clean
+
+# 2. Restore .NET packages (backend dependencies)
 dotnet restore AuthBackend/AuthBackend.csproj
 dotnet restore AuthBackend.Tests/AuthBackend.Tests.csproj
 
-# 2. Install Node.js packages (frontend dependencies)
+# 3. Install Node.js packages (frontend dependencies)
 cd AuthFrontend && npm install
 
-# 3. Run tests
-dotnet test AuthBackend.Tests
+# 4. Run tests
+dotnet test AuthBackend.Tests --configuration Release
 
-# 4. Build backend
-dotnet build AuthBackend/AuthBackend.csproj
+# 5. Build backend
+dotnet build AuthBackend/AuthBackend.csproj --configuration Release
 
-# 5. Build frontend
+# 6. Build frontend
 npm run build
 
-# 6. Start services
+# 7. Start services
 docker-compose up -d --build
 cd AuthFrontend && npm run dev
 ```
@@ -59,9 +76,6 @@ GET  /api/auth/me         - Authorization: Bearer <token>
 ```bash
 # Run all tests
 dotnet test AuthBackend.Tests
-
-# With coverage
-dotnet test --collect:"XPlat Code Coverage"
 ```
 
 ## 🐳 Docker Services
@@ -70,16 +84,46 @@ dotnet test --collect:"XPlat Code Coverage"
 - **Frontend**: http://localhost:5173  
 - **Database**: localhost:5432
 
-## 🔧 Development
+### Database Access Commands
 
 ```bash
-# Backend
+# Connect to PostgreSQL database
+docker-compose exec db psql -U postgres -d authdb
+
+# View all registered users
+SELECT email, "firstName", "lastName", "createdAt" FROM "AspNetUsers";
+
+# View users table structure
+\d "AspNetUsers";
+
+# View all tables
+\dt;
+
+# Count total users
+SELECT COUNT(*) FROM "AspNetUsers";
+
+# View recent users (last 10)
+SELECT email, "firstName", "lastName", "createdAt" 
+FROM "AspNetUsers" 
+ORDER BY "createdAt" DESC 
+LIMIT 10;
+
+# Exit database
+\q
+```
+
+## 🔧 Development
+
+**Use Git Bash for all commands**
+
+```bash
+# Backend development server
 cd AuthBackend && dotnet run
 
-# Frontend
+# Frontend development server
 cd AuthFrontend && npm run dev
 
-# Both in parallel
+# Both in parallel (requires make)
 make dev
 ```
 

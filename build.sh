@@ -102,9 +102,13 @@ restore_dependencies() {
 run_tests() {
     echo -e "${BLUE}🧪 Running tests...${NC}"
     
+    # Build tests first
+    echo "Building tests..."
+    cd "$TESTS_DIR"
+    dotnet build --configuration $BUILD_CONFIGURATION
+    
     # Run backend unit tests
     echo "Running backend unit tests..."
-    cd "$TESTS_DIR"
     dotnet test --configuration $BUILD_CONFIGURATION --no-build --verbosity normal
     
     echo -e "${GREEN}✅ All tests passed${NC}"

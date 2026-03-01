@@ -1,10 +1,14 @@
 using AuthenticationApi.DTOs;
-using AuthenticationApi.Models;
 using AuthenticationApi.Services;
+using AuthenticationApi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Xunit;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace AuthenticationApi.Tests
 {
@@ -84,7 +88,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Username = "johndoe",
                 Email = "john@example.com",
                 Password = "password123"
             };
@@ -118,7 +121,6 @@ namespace AuthenticationApi.Tests
             {
                 FirstName = "Jane",
                 LastName = "Doe",
-                Username = "janedoe",
                 Email = "jane@example.com",
                 Password = "password123"
             };

@@ -1,10 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using AuthenticationApi.DTOs;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AuthenticationApi.Data;
+using AuthenticationApi.Models;
+using Microsoft.AspNetCore.Identity;
+using System.Net.Http.Json;
+using System.Net;
 using Xunit;
 
 namespace AuthenticationApi.Tests
