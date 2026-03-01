@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000"; // Connecting to backend URL
+const API_URL = "http://localhost:5277/api/auth"; // Updated to correct backend URL and endpoint
 
 /**
  * Register a new user
@@ -23,7 +23,7 @@ export const loginUser = (data) => {
  * @param {string} token - JWT token
  */
 export const getUserDetails = (token) => {
-  return axios.get(`${API_URL}/user`, {
+  return axios.get(`${API_URL}/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 };

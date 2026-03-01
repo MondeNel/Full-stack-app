@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { registerUser } from "../api/auth";
 import {
   TextField,
@@ -8,7 +9,10 @@ import {
   Box,
   Paper,
   InputAdornment,
-  IconButton
+  IconButton,
+  Alert,
+  Snackbar,
+  CircularProgress
 } from "@mui/material";
 import AccountCircle from "@mui/icons-material/AccountCircle";
 import EmailIcon from "@mui/icons-material/Email";
@@ -19,17 +23,35 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 const Register = () => {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
+  const navigate = useNavigate();
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleTogglePassword = () => setShowPassword(!showPassword);
 
+  const showNotification = (message, severity = "success") => {
+    setNotification({ open: true, message, severity });
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    
     try {
       await registerUser(form);
-      alert("Registration successful!");
+      showNotification("Registration successful! Redirecting to login...", "success");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err) {
-      alert("Error: " + err.response?.data?.message || err.message);
+      showNotification(err.response?.data?.message || "Registration failed. Please try again.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,9 +103,34 @@ const Register = () => {
               )
             }}
           />
-          <Button type="submit" variant="contained" color="primary" size="large">Register</Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            size="large" 
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
+            sx={{ py: 1.5 }}
+          >
+            {loading ? "Creating Account..." : "Register"}
+          </Button>
         </Box>
       </Paper>
+      
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={3000} 
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity} 
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

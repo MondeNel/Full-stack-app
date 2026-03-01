@@ -9,7 +9,10 @@ import {
   Box,
   Paper,
   InputAdornment,
-  IconButton
+  IconButton,
+  Alert,
+  Snackbar,
+  CircularProgress
 } from "@mui/material";
 import EmailIcon from "@mui/icons-material/Email";
 import LockIcon from "@mui/icons-material/Lock";
@@ -19,19 +22,36 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
   const navigate = useNavigate();
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleTogglePassword = () => setShowPassword(!showPassword);
 
+  const showNotification = (message, severity = "success") => {
+    setNotification({ open: true, message, severity });
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    
     try {
       const res = await loginUser(form);
-      localStorage.setItem("token", res.data.token);
-      navigate("/user");
+      localStorage.setItem("token", res.data.accessToken);
+      showNotification("Login successful! Redirecting...", "success");
+      setTimeout(() => {
+        navigate("/user");
+      }, 1000);
     } catch (err) {
-      alert("Login failed: " + err.response?.data?.message || err.message);
+      showNotification(err.response?.data?.message || "Login failed. Please check your credentials.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,9 +87,34 @@ const Login = () => {
               )
             }}
           />
-          <Button type="submit" variant="contained" color="primary" size="large">Login</Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            size="large" 
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
+            sx={{ py: 1.5 }}
+          >
+            {loading ? "Signing In..." : "Login"}
+          </Button>
         </Box>
       </Paper>
+      
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={3000} 
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity} 
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
