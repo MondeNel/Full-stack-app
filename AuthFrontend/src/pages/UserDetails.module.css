@@ -1,0 +1,18 @@
+.detailsContainer {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+}
+
+.detailsContainer h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.detailsContainer p {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
