@@ -1,0 +1,17 @@
+# Build output
+**/bin/
+**/obj/
+
+# Migration SQL script
+AuthBackend/migration.sql
+
+# User secrets
+**/appsettings.Development.json
+
+# VS files
+.vs/
+*.user
+
+# OS files
+.DS_Store
+Thumbs.db

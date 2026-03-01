@@ -38,7 +38,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // For development; enable HTTPS in production
+    options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -81,3 +81,6 @@ app.MapControllers();
 #endregion
 
 app.Run();
+
+// Needed for integration tests
+public partial class Program { }

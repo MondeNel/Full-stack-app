@@ -40,12 +40,15 @@ namespace AuthenticationApi.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var token = await _authService.LoginAsync(request);
-
-            return Ok(new
+            try
             {
-                accessToken = token
-            });
+                var token = await _authService.LoginAsync(request);
+                return Ok(new { accessToken = token });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { message = "Invalid credentials." });
+            }
         }
 
         /// <summary>
@@ -62,12 +65,15 @@ namespace AuthenticationApi.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            await _authService.RegisterAsync(request);
-
-            return Ok(new
+            try
             {
-                message = "User registered successfully"
-            });
+                await _authService.RegisterAsync(request);
+                return Ok(new { message = "User registered successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -83,11 +89,15 @@ namespace AuthenticationApi.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var email = User.FindFirstValue(ClaimTypes.Email);
+            var firstName = User.FindFirstValue("FirstName");  // Added
+            var lastName = User.FindFirstValue("LastName");    // Added
 
             return Ok(new
             {
                 id = userId,
-                email
+                email,
+                firstName,  // Added
+                lastName    // Added
             });
         }
     }

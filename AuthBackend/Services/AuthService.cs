@@ -52,7 +52,9 @@ namespace AuthenticationApi.Services
             var user = new User
             {
                 UserName = request.Username,
-                Email = request.Email
+                Email = request.Email,
+                FirstName = request.FirstName,  // Added
+                LastName = request.LastName      // Added
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
@@ -86,7 +88,9 @@ namespace AuthenticationApi.Services
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.UserName!),
-                new Claim(ClaimTypes.Email, user.Email!)
+                new Claim(ClaimTypes.Email, user.Email!),
+                new Claim("FirstName", user.FirstName),  // Added
+                new Claim("LastName", user.LastName)     // Added
             };
 
             return GenerateJwtToken(claims);
