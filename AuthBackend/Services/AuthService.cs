@@ -53,8 +53,8 @@ namespace AuthenticationApi.Services
             {
                 UserName = request.Username,
                 Email = request.Email,
-                FirstName = request.FirstName,  // Added
-                LastName = request.LastName      // Added
+                FirstName = string.Empty,  // Default to empty string
+                LastName = string.Empty     // Default to empty string
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
@@ -75,9 +75,7 @@ namespace AuthenticationApi.Services
         /// </exception>
         public async Task<string> LoginAsync(LoginDto request)
         {
-            var user =
-                await _userManager.FindByNameAsync(request.Username)
-                ?? await _userManager.FindByEmailAsync(request.Username);
+            var user = await _userManager.FindByEmailAsync(request.Email);
 
             if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
             {

@@ -9,11 +9,12 @@ namespace AuthenticationApi.DTOs
     public class LoginDto
     {
         /// <summary>
-        /// Username or email of the user.
-        /// Example: "johndoe" or "user@example.com"
+        /// Email address of the user.
+        /// Example: "user@example.com"
         /// </summary>
-        [Required(ErrorMessage = "Username is required")]
-        public string Username { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
 
         /// <summary>
         /// User's password.
