@@ -176,26 +176,43 @@ docker_operations() {
 # HEALTH CHECKS
 # =============================================================================
 
+wait_for_service() {
+    local name=$1
+    local url=$2
+    local max_attempts=${3:-12}
+    local delay=${4:-5}
+
+    echo "Checking $name health..."
+    for ((i=1; i<=max_attempts; i++)); do
+        if curl -sf "$url" > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ $name is accessible${NC}"
+            return 0
+        fi
+        if [ $i -eq $max_attempts ]; then
+            echo -e "${RED}❌ $name failed to respond after $((max_attempts * delay))s.${NC}"
+            echo -e "${RED}   Run 'docker-compose logs' to investigate.${NC}"
+            return 1
+        fi
+        echo -e "${YELLOW}⏳ $name not ready yet (attempt $i/$max_attempts) — retrying in ${delay}s...${NC}"
+        sleep $delay
+    done
+}
+
 health_checks() {
     echo -e "${BLUE}🏥 Running health checks...${NC}"
-    
-    # Check backend health
-    echo "Checking backend health..."
-    if curl -f http://localhost:5277/health > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ Backend is healthy${NC}"
+
+    backend_ok=0
+    frontend_ok=0
+
+    wait_for_service "Backend"  "http://localhost:5277/health" || backend_ok=1
+    wait_for_service "Frontend" "http://localhost:5173" || frontend_ok=1
+
+    if [ $backend_ok -ne 0 ] || [ $frontend_ok -ne 0 ]; then
+        echo -e "${YELLOW}⚠️ One or more services failed health checks.${NC}"
+        echo -e "${YELLOW}   Run 'docker-compose logs -f' to investigate.${NC}"
     else
-        echo -e "${YELLOW}⚠️ Backend health check failed (health endpoint may not exist)${NC}"
+        echo -e "${GREEN}✅ All health checks passed${NC}"
     fi
-    
-    # Check frontend accessibility
-    echo "Checking frontend accessibility..."
-    if curl -f http://localhost:5173 > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ Frontend is accessible${NC}"
-    else
-        echo -e "${YELLOW}⚠️ Frontend not accessible (may not be running)${NC}"
-    fi
-    
-    echo -e "${GREEN}✅ Health checks completed${NC}"
 }
 
 # =============================================================================

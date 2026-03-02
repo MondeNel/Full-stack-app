@@ -184,30 +184,46 @@ function Invoke-DockerOperations {
 # HEALTH CHECKS
 # =============================================================================
 
+function Wait-ForService {
+    param(
+        [string]$Name,
+        [string]$Url,
+        [int]$MaxAttempts = 12,
+        [int]$DelaySeconds = 5
+    )
+
+    Write-Host "Checking $Name health..."
+    for ($i = 1; $i -le $MaxAttempts; $i++) {
+        try {
+            $response = Invoke-WebRequest -Uri $Url -TimeoutSec 5 -ErrorAction Stop
+            Write-ColorOutput "✅ $Name is accessible" "Green"
+            return $true
+        }
+        catch {
+            if ($i -eq $MaxAttempts) {
+                Write-ColorOutput "❌ $Name failed to respond after $($MaxAttempts * $DelaySeconds)s." "Red"
+                Write-ColorOutput "   Run 'docker-compose logs' to investigate." "Red"
+                return $false
+            }
+            Write-ColorOutput "⏳ $Name not ready yet (attempt $i/$MaxAttempts) — retrying in ${DelaySeconds}s..." "Yellow"
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+}
+
 function Invoke-HealthChecks {
     Write-ColorOutput "🏥 Running health checks..." "Blue"
-    
-    # Check backend health
-    Write-Host "Checking backend health..."
-    try {
-        $response = Invoke-WebRequest -Uri "http://localhost:5277" -TimeoutSec 5 -ErrorAction Stop
-        Write-ColorOutput "✅ Backend is accessible" "Green"
+
+    $backendOk  = Wait-ForService -Name "Backend"  -Url "http://localhost:5277"
+    $frontendOk = Wait-ForService -Name "Frontend" -Url "http://localhost:5173"
+
+    if (-not $backendOk -or -not $frontendOk) {
+        Write-ColorOutput "⚠️ One or more services failed health checks." "Yellow"
+        Write-ColorOutput "   Run 'docker-compose logs -f' to investigate." "Yellow"
     }
-    catch {
-        Write-ColorOutput "⚠️ Backend health check failed (may still be starting)" "Yellow"
+    else {
+        Write-ColorOutput "✅ All health checks passed" "Green"
     }
-    
-    # Check frontend accessibility
-    Write-Host "Checking frontend accessibility..."
-    try {
-        $response = Invoke-WebRequest -Uri "http://localhost:5173" -TimeoutSec 5 -ErrorAction Stop
-        Write-ColorOutput "✅ Frontend is accessible" "Green"
-    }
-    catch {
-        Write-ColorOutput "⚠️ Frontend not accessible (may not be running)" "Yellow"
-    }
-    
-    Write-ColorOutput "✅ Health checks completed" "Green"
 }
 
 # =============================================================================
